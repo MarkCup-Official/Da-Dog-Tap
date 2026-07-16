@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d19">
+  <meta name="description" content="自动识别 BPM 的狗狗节奏游戏：自由打击与 3Key 音游双模式。">
+  <title>Da Dog Tap · 狗狗节奏游戏</title>
+  <script>
+    // Toy pages may be opened as /toy/<slug> without a trailing slash. In that
+    // form, relative assets would otherwise resolve one directory too high.
+    if (!location.pathname.endsWith("/") && !/\.html?$/i.test(location.pathname)) {
+      const base = document.createElement("base");
+      base.href = `${location.origin}${location.pathname}/`;
+      document.head.append(base);
+    }
+  </script>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="game-header">
+    <button class="brand" type="button" data-route="menu" aria-label="返回游戏主菜单">
+      <img src="./images/logo.png" alt="" width="48" height="48">
+      <span><b>DA DOG TAP</b><small>RHYTHM ARCADE</small></span>
+    </button>
+
+    <nav class="mode-tabs" aria-label="游戏模式">
+      <button type="button" data-route="game"><i>01</i>3KEY 音游</button>
+    </nav>
+
+    <span class="status-pill" id="engineStatus"><i></i> 等待音频</span>
+  </header>
+
+  <main class="app-shell">
+    <section class="screen menu-screen" data-screen="menu" aria-labelledby="menuTitle">
+      <img class="menu-art" src="./images/banner.jpg" alt="">
+      <div class="menu-overlay" aria-hidden="true"></div>
+      <div class="menu-grid" aria-hidden="true"></div>
+
+      <div class="menu-content">
+        <div class="menu-intro">
+          <span class="eyebrow">BPM DETECTOR · 3KEY RHYTHM GAME</span>
+          <h1 id="menuTitle">DA DOG<br><em>TAP!</em></h1>
+          <p>让音乐变成狗狗的节奏游乐场，自动识别节拍并生成三轨谱面。</p>
+          <div class="track-cartridge">
+            <span class="cartridge-disc" aria-hidden="true"></span>
+            <div>
+              <small>NOW LOADING</small>
+              <b id="menuTrackName">XmegaLxl - JET SET!.mp3</b>
+            </div>
+            <span class="cartridge-bpm"><strong id="menuBpm">—</strong> BPM</span>
+          </div>
+        </div>
+
+        <div class="mode-select single-mode" aria-label="进入游戏">
+          <button class="mode-card chart-mode" type="button" data-route="game">
+            <span class="mode-index">MODE 01</span>
+            <span class="mode-icon" aria-hidden="true">▼</span>
+            <span class="mode-copy">
+              <strong>3KEY 音游</strong>
+              <small>AUTO CHART</small>
+              <p>自动生成三轨谱面，挑战分数与连击。</p>
+            </span>
+            <span class="mode-enter">PLAY <i>→</i></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="menu-bottom">
+        <label class="upload-button" for="audioUpload">
+          <span>＋ 载入自己的音乐</span>
+          <input id="audioUpload" type="file" accept="audio/*">
+        </label>
+        <button class="text-action" id="useDefaultButton" type="button">恢复默认音乐</button>
+        <span>所有分析均在浏览器本地完成</span>
+      </div>
+    </section>
+
+    <section class="screen mode-screen sampler-screen retired-mode" data-screen="sampler" aria-labelledby="samplerTitle" hidden>
+      <div class="screen-glow coral-glow" aria-hidden="true"></div>
+      <div class="screen-frame">
+        <div class="screen-titlebar">
+          <button class="back-button" type="button" data-route="menu" aria-label="返回主菜单">←</button>
+          <div>
+            <span class="level-tag">MODE 01 · BEAT TAP</span>
+            <h1 id="samplerTitle">自由打击</h1>
+          </div>
+          <div class="active-track">
+            <small>TRACK</small>
+            <b id="trackName">准备载入默认音乐…</b>
+            <span class="analysis-badge" id="analysisState">待分析</span>
+          </div>
+          <label class="compact-upload" for="samplerUpload">换歌
+            <input id="samplerUpload" type="file" accept="audio/*">
+          </label>
+        </div>
+
+        <div class="sampler-layout">
+          <div class="sampler-main">
+            <article class="music-console">
+              <div class="console-top">
+                <div class="bpm-display">
+                  <span>BPM</span>
+                  <button id="bpmMinus" type="button" aria-label="BPM 减一">−</button>
+                  <strong id="bpmValue">—</strong>
+                  <button id="bpmPlus" type="button" aria-label="BPM 加一">＋</button>
+                </div>
+                <div class="console-stats">
+                  <span>STYLE <b id="rhythmType">—</b></span>
+                  <span>GRID <b id="beatInterval">— ms</b></span>
+                  <span>HITS <b id="onsetCount">—</b></span>
+                </div>
+                <span class="confidence" id="confidenceText">分析后可手动微调</span>
+              </div>
+
+              <div class="waveform-wrap">
+                <canvas id="waveformCanvas" height="180" aria-label="音乐波形与节拍标记"></canvas>
+                <div class="playhead" id="playhead" aria-hidden="true"></div>
+                <div class="waveform-placeholder" id="waveformPlaceholder">
+                  <div class="loader-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                  <span>正在准备音频引擎</span>
+                </div>
+              </div>
+
+              <div class="transport">
+                <button class="round-button" id="playButton" type="button" aria-label="播放音乐" disabled>
+                  <span class="play-icon" aria-hidden="true"></span>
+                </button>
+                <div class="time-readout">
+                  <span id="currentTime">0:00.0</span><span>/</span><span id="duration">0:00.0</span>
+                </div>
+                <label class="seek-field" aria-label="音乐播放位置">
+                  <input id="seekSlider" type="range" min="0" max="1000" value="0" disabled>
+                </label>
+                <button class="icon-button" id="restartButton" type="button" aria-label="返回开头" title="返回开头" disabled>↺</button>
+              </div>
+            </article>
+
+            <div class="pads" aria-label="打击声音按钮">
+              <button class="sound-pad pad-da" type="button" data-sound="da">
+                <span class="pad-key">1</span><span class="paw" aria-hidden="true">●</span>
+                <strong>哒</strong><small>DA.WAV</small><i class="pad-pulse" aria-hidden="true"></i>
+              </button>
+              <button class="sound-pad pad-gou" type="button" data-sound="gou">
+                <span class="pad-key">2</span><span class="paw" aria-hidden="true">●</span>
+                <strong>狗</strong><small>GOU.WAV</small><i class="pad-pulse" aria-hidden="true"></i>
+              </button>
+              <button class="sound-pad pad-jiao" type="button" data-sound="jiao">
+                <span class="pad-key">3</span><span class="paw" aria-hidden="true">●</span>
+                <strong>叫</strong><small>JIAO.WAV</small><i class="pad-pulse" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <aside class="arcade-sidebar">
+            <div class="side-title"><span>PLAY SETTINGS</span><b>节拍设置</b></div>
+            <div class="setting-block">
+              <span>节奏吸附</span>
+              <div class="toggle-line">
+                <label class="switch"><input id="snapToggle" type="checkbox" checked><span aria-hidden="true"></span></label>
+                <b id="snapStateText">已开启</b>
+              </div>
+              <p>开启后，点击会被安排到下一条节拍网格。</p>
+            </div>
+            <label class="setting-block">
+              <span>吸附精度</span>
+              <select id="snapDivision">
+                <option value="1">1 拍</option><option value="2" selected>1/2 拍</option>
+                <option value="3">1/3 拍</option><option value="4">1/4 拍</option><option value="8">1/8 拍</option>
+              </select>
+            </label>
+            <div class="setting-block controls-hint">
+              <span>快速操作</span>
+              <p><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 也可以触发三个声音。</p>
+            </div>
+            <button class="wide-button" id="reanalyzeButton" type="button" disabled>重新识别节奏</button>
+            <button class="next-mode-button" type="button" data-route="game">前往 3KEY 音游 <span>→</span></button>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen mode-screen game-screen" data-screen="game" aria-labelledby="gameTitle" hidden>
+      <div class="screen-glow cyan-glow" aria-hidden="true"></div>
+      <div class="screen-frame">
+        <div class="screen-titlebar">
+          <button class="back-button" type="button" data-route="menu" aria-label="返回主菜单">←</button>
+          <div>
+            <span class="level-tag cyan-text">MODE 01 · AUTO CHART</span>
+            <h1 id="gameTitle">3KEY 音游</h1>
+          </div>
+          <div class="game-track-title">
+            <small>AUTO-GENERATED CHART</small>
+            <b><span id="chartNoteCount">0</span> NOTES · <span id="gameRhythmLabel">等待分析</span></b>
+          </div>
+          <label class="compact-upload cyan-upload" for="gameUpload">换歌
+            <input id="gameUpload" type="file" accept="audio/*">
+          </label>
+        </div>
+
+        <div class="game-layout">
+          <article class="game-shell">
+            <div class="game-hud">
+              <div><span>SCORE</span><b id="scoreValue">000000</b></div>
+              <div class="combo"><span>COMBO</span><b id="comboValue">0</b></div>
+              <div><span>ACCURACY</span><b id="accuracyValue">100.0%</b></div>
+            </div>
+
+            <div class="game-stage" id="gameStage">
+              <canvas id="gameCanvas" aria-label="三轨音乐游戏区域"></canvas>
+              <div class="judgement" id="judgement" aria-live="polite">READY</div>
+              <div class="stage-message" id="stageMessage">
+                <b>谱面尚未生成</b><span>载入音乐后，点击右侧生成谱面</span>
+              </div>
+            </div>
+
+            <div class="play-settings" aria-label="游玩设置">
+              <label class="play-speed-setting">
+                <span><small>SCROLL SPEED</small>铺面流速</span>
+                <input id="scrollSpeedSlider" type="range" min="60" max="500" step="10" value="100">
+                <b id="scrollSpeedValue">1.0×</b>
+              </label>
+              <div class="autoplay-setting">
+                <span><small>AUTO PLAY</small><b id="autoplayState">关闭</b></span>
+                <label class="switch">
+                  <input id="autoplayToggle" type="checkbox">
+                  <span aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="key-deck" id="keyDeck">
+              <button type="button" data-lane="0"><span id="keyLabel0">←</span><small>哒</small></button>
+              <button type="button" data-lane="1"><span id="keyLabel1">↓</span><small>狗</small></button>
+              <button type="button" data-lane="2"><span id="keyLabel2">→</span><small>叫</small></button>
+            </div>
+          </article>
+
+          <aside class="game-controls" id="gameControls">
+            <details class="control-card chart-card" id="chartConfigPanel" open>
+              <summary class="chart-card-summary">
+                <span>
+                  <span class="micro-label">CHART GENERATOR</span>
+                  <strong>自动铺面</strong>
+                </span>
+                <i aria-hidden="true">⌄</i>
+              </summary>
+              <div class="chart-card-content">
+                <p id="chartDescription">分析完成后，根据节奏类型生成三轨音符。</p>
+                <div class="chart-setting-grid">
+                  <label>
+                    <span>难度 <b id="difficultyState">普通</b></span>
+                    <select id="chartDifficulty">
+                      <option value="easy">简单</option>
+                      <option value="normal" selected>普通</option>
+                      <option value="hard">困难</option>
+                      <option value="expert">专家</option>
+                    </select>
+                  </label>
+                </div>
+                <details class="density-settings">
+                  <summary class="pattern-heading">
+                    <span>谱面密度</span>
+                    <small id="densityValue">80%</small>
+                  </summary>
+                  <label class="density-slider-setting">
+                    <span>音符数量倍率 <b>最高 300%</b></span>
+                    <input id="densitySlider" type="range" min="25" max="300" step="5" value="80">
+                  </label>
+                </details>
+                <details class="pattern-settings">
+                  <summary class="pattern-heading">
+                    <span>范式权重</span>
+                    <small>默认折叠 · 拖动后切换为自定义</small>
+                  </summary>
+                  <div class="pattern-weight-list">
+                    <label>
+                      <span>交互 <b data-pattern-value>36</b></span>
+                      <input type="range" min="0" max="100" value="36" data-pattern-weight="alternating">
+                    </label>
+                    <label>
+                      <span>纵连 <b data-pattern-value>20</b></span>
+                      <input type="range" min="0" max="100" value="20" data-pattern-weight="jack">
+                    </label>
+                    <label class="disabled-pattern">
+                      <span>双压 <b data-pattern-value>0</b></span>
+                      <input type="range" min="0" max="100" value="0" data-pattern-weight="chord" disabled>
+                    </label>
+                    <label>
+                      <span>楼梯 <b data-pattern-value>22</b></span>
+                      <input type="range" min="0" max="100" value="22" data-pattern-weight="stair">
+                    </label>
+                    <label>
+                      <span>锚点 <b data-pattern-value>12</b></span>
+                      <input type="range" min="0" max="100" value="12" data-pattern-weight="anchor">
+                    </label>
+                  </div>
+                </details>
+                <label class="seed-setting">
+                  <span>随机种子 <b>同歌同设置可复现</b></span>
+                  <span class="seed-row">
+                    <input id="chartSeed" type="text" value="DOG-001" maxlength="32" spellcheck="false">
+                    <button id="randomizeSeedButton" type="button" title="生成八位随机种子">随机</button>
+                  </span>
+                </label>
+                <button class="primary-wide" id="generateChartButton" type="button" disabled>生成 / 刷新谱面</button>
+              </div>
+            </details>
+
+            <div class="control-card key-card">
+              <div class="card-title-row">
+                <div><span class="micro-label">KEY BINDINGS</span><h3>轨道按键</h3></div>
+                <button class="text-button" id="resetKeysButton" type="button">恢复默认</button>
+              </div>
+              <div class="binding-list">
+                <button type="button" class="binding-button" data-bind-lane="0">
+                  <span><i class="lane-chip lane-one"></i>左轨 · 哒</span><kbd id="bindingLabel0">←</kbd>
+                </button>
+                <button type="button" class="binding-button" data-bind-lane="1">
+                  <span><i class="lane-chip lane-two"></i>中轨 · 狗</span><kbd id="bindingLabel1">↓</kbd>
+                </button>
+                <button type="button" class="binding-button" data-bind-lane="2">
+                  <span><i class="lane-chip lane-three"></i>右轨 · 叫</span><kbd id="bindingLabel2">→</kbd>
+                </button>
+              </div>
+              <p class="binding-help" id="bindingHelp">点击轨道后按下新按键。默认使用 ← ↓ →。</p>
+            </div>
+
+            <div class="game-actions">
+              <button class="primary-wide play-game" id="startGameButton" type="button" disabled>START GAME</button>
+              <button class="wide-button" id="stopGameButton" type="button" disabled>结束</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./rhythm-algorithms.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
