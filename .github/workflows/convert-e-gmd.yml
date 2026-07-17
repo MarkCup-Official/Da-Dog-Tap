@@ -2,15 +2,19 @@ name: Convert pinned E-GMD model
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - .github/workflows/convert-e-gmd.yml
+    inputs:
+      source_run_id:
+        description: Existing successful run containing the frozen-e-gmd artifact
+        required: false
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   export-frozen-graph:
+    if: ${{ inputs.source_run_id == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -63,18 +67,21 @@ jobs:
 
   convert-tensorflowjs:
     needs: export-frozen-graph
+    if: ${{ always() && (needs.export-frozen-graph.result == 'success' || inputs.source_run_id != '') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
-          cache: pip
 
       - uses: actions/download-artifact@v4
         with:
           name: frozen-e-gmd
           path: frozen
+          run-id: ${{ inputs.source_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
 
       - name: Convert without quantization
         shell: bash
