@@ -18,6 +18,20 @@ jobs:
       RELEASE_TAG: e-gmd-tfjs-amt-v1
       GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Record current publish run
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '{"runId":%s,"status":"running"}\n' "$GITHUB_RUN_ID" \
+            > .github/e-gmd-publish-run.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/e-gmd-publish-run.json
+          git commit -m "ci: record active E-GMD artifact publish run"
+          git push
+
       - uses: actions/download-artifact@v4
         with:
           name: tfjs-e-gmd-float32
