@@ -1,0 +1,97 @@
+name: Convert pinned E-GMD model
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/convert-e-gmd.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export-frozen-graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MAGENTA_COMMIT: 94529798dfbbb14c27ddfd76f23027dc8e2ce185
+      CHECKPOINT_SHA256: 09765ae0ff19c7d769a3c20e158eba3b9cd279429b02e498b1e911d16f82e2c0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and verify pinned sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors \
+            "https://github.com/magenta/magenta/archive/$MAGENTA_COMMIT.tar.gz" \
+            --output magenta.tar.gz
+          tar -xzf magenta.tar.gz
+          mv "magenta-$MAGENTA_COMMIT" magenta-src
+          curl --fail --location --retry 4 --retry-all-errors \
+            "https://storage.googleapis.com/magentadata/models/onsets_frames_transcription/e-gmd_checkpoint.zip" \
+            --output e-gmd_checkpoint.zip
+          echo "$CHECKPOINT_SHA256  e-gmd_checkpoint.zip" | sha256sum --check --strict
+          unzip -q e-gmd_checkpoint.zip -d e-gmd-checkpoint
+
+      - name: Export float32 TF1 graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --volume "$PWD:/work" \
+            --workdir /work \
+            tensorflow/tensorflow:1.15.4-py3 \
+            bash -lc '
+              set -euo pipefail
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+                ffmpeg git libasound2-dev libjack-dev libsndfile1 libsndfile1-dev
+              python -m pip install --upgrade "pip<22" "setuptools<60" wheel
+              python -m pip install --no-cache-dir -e /work/magenta-src
+              python /work/tools/amt/export_e_gmd_graph.py \
+                --checkpoint-dir /work/e-gmd-checkpoint \
+                --output /work/frozen_e_gmd.pb
+            '
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frozen-e-gmd
+          path: frozen_e_gmd.pb
+          if-no-files-found: error
+          retention-days: 7
+
+  convert-tensorflowjs:
+    needs: export-frozen-graph
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frozen-e-gmd
+          path: frozen
+
+      - name: Convert without quantization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install "tensorflowjs==4.22.0"
+          tensorflowjs_converter \
+            --input_format=tf_frozen_model \
+            --output_node_names=onset_probs,velocity_values \
+            frozen/frozen_e_gmd.pb tfjs-e-gmd
+          test -f tfjs-e-gmd/model.json
+          test -n "$(find tfjs-e-gmd -name '*.bin' -print -quit)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfjs-e-gmd-float32
+          path: tfjs-e-gmd
+          if-no-files-found: error
+          retention-days: 7
