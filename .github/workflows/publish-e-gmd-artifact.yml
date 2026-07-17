@@ -1,0 +1,88 @@
+name: Publish connector-readable E-GMD artifact
+
+on:
+  push:
+    paths:
+      - .github/workflows/publish-e-gmd-artifact.yml
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SOURCE_RUN_ID: "29561923955"
+      RELEASE_TAG: e-gmd-tfjs-amt-v1
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfjs-e-gmd-float32
+          path: tfjs-e-gmd
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+
+      - name: Create checksummed text chunks
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd tfjs-e-gmd
+            zip -q -r ../tfjs-e-gmd-float32.zip .
+          )
+          python - <<'PY'
+          import base64
+          import hashlib
+          import json
+          from pathlib import Path
+
+          archive = Path("tfjs-e-gmd-float32.zip").read_bytes()
+          encoded = base64.b64encode(archive).decode("ascii")
+          output = Path("connector-release")
+          output.mkdir()
+          chunks = []
+          chunk_chars = 1024 * 1024
+          for index, offset in enumerate(range(0, len(encoded), chunk_chars)):
+              contents = encoded[offset:offset + chunk_chars]
+              name = "chunk-{:03d}.data".format(index)
+              (output / name).write_text(contents, encoding="ascii")
+              chunks.append({
+                  "name": name,
+                  "chars": len(contents),
+                  "sha256": hashlib.sha256(contents.encode("ascii")).hexdigest(),
+              })
+          manifest = {
+              "schemaVersion": 1,
+              "sourceRunId": 29561923955,
+              "archive": "tfjs-e-gmd-float32.zip",
+              "archiveBytes": len(archive),
+              "archiveSha256": hashlib.sha256(archive).hexdigest(),
+              "encoding": "base64",
+              "chunks": chunks,
+          }
+          (output / "index.json").write_text(
+              json.dumps(manifest, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Publish immutable artifact tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd connector-release
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan e-gmd-artifact
+          git add .
+          git commit -m "model: publish E-GMD TensorFlow.js amt-v1"
+          git tag --force "$RELEASE_TAG"
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          gh auth setup-git
+          git push --force origin HEAD:refs/heads/e-gmd-artifact
+          git push --force origin "refs/tags/$RELEASE_TAG"
