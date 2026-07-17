@@ -1,0 +1,42 @@
+name: Publish pinned AMT model
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/publish-amt-model.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish-htdemucs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MODEL_URL: https://huggingface.co/set-soft/audio_separation/resolve/main/Demucs/htdemucs.safetensors
+      MODEL_FILE: htdemucs.safetensors
+      MODEL_SIZE: "84030696"
+      MODEL_SHA256: 8193504cdfb3943adaf039b8acb524a46e87ebf232c383ac7a32c80a6578423e
+      RELEASE_TAG: amt-v1
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download pinned source model
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-all-errors \
+            "$MODEL_URL" --output "$MODEL_FILE"
+          test "$(stat --format=%s "$MODEL_FILE")" = "$MODEL_SIZE"
+          echo "$MODEL_SHA256  $MODEL_FILE" | sha256sum --check --strict
+
+      - name: Create release and upload verified asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --title "DA DOG TAP AMT models v1" \
+              --notes "Pinned browser model asset for DA DOG TAP. SHA-256: $MODEL_SHA256"
+          fi
+          gh release upload "$RELEASE_TAG" "$MODEL_FILE" --clobber
