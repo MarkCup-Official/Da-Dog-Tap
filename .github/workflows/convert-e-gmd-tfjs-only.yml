@@ -1,0 +1,47 @@
+name: Resume E-GMD TensorFlow.js conversion
+
+on:
+  push:
+    paths:
+      - .github/workflows/convert-e-gmd-tfjs-only.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  convert-tensorflowjs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frozen-e-gmd
+          path: frozen
+          run-id: "29559610151"
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+
+      - name: Convert without quantization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install "tensorflowjs==4.22.0"
+          tensorflowjs_converter \
+            --input_format=tf_frozen_model \
+            --output_node_names=onset_probs,velocity_values \
+            frozen/frozen_e_gmd.pb tfjs-e-gmd
+          test -f tfjs-e-gmd/model.json
+          test -n "$(find tfjs-e-gmd -name '*.bin' -print -quit)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfjs-e-gmd-float32
+          path: tfjs-e-gmd
+          if-no-files-found: error
+          retention-days: 7
