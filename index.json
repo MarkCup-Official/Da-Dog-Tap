@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "sourceRunId": 29561923955,
+  "archive": "tfjs-e-gmd-float32.zip",
+  "archiveBytes": 5230547,
+  "archiveSha256": "3af07f6b53469d3a365a558ba291d5c55c7b91c8662e9a6a56005d6c1da05f31",
+  "encoding": "base64",
+  "chunks": [
+    {
+      "name": "chunk-000.data",
+      "chars": 524288,
+      "sha256": "3b8826facf7af5877091a6b676bfba8597401e0b92878a02b6a403e26d78f9b0"
+    },
+    {
+      "name": "chunk-001.data",
+      "chars": 524288,
+      "sha256": "80445277f3c15bd3af2bc4537040e2b184af3f40c2f6acffae179561fd91d58b"
+    },
+    {
+      "name": "chunk-002.data",
+      "chars": 524288,
+      "sha256": "88ba317dc19051eb4e0854e9c56ef6b228e021da9efaab247817c8f46b03cf69"
+    },
+    {
+      "name": "chunk-003.data",
+      "chars": 524288,
+      "sha256": "0af4a5524214b9afcceaa09a5f5053cd1b5d2433719d9e4ca50f1bc9c725bb39"
+    },
+    {
+      "name": "chunk-004.data",
+      "chars": 524288,
+      "sha256": "dc75a8a701e604905b66bcf3a97d89e6c042359a25f90059c133b1719ff2b2f2"
+    },
+    {
+      "name": "chunk-005.data",
+      "chars": 524288,
+      "sha256": "3f28d99592863e0c93c2eca362e0083d2e976cb9176edd4bf75c224882857c76"
+    },
+    {
+      "name": "chunk-006.data",
+      "chars": 524288,
+      "sha256": "289cec291de1d0c66cccc65b7463623d25d1526e95da48a3fedbdf50e05dcdd4"
+    },
+    {
+      "name": "chunk-007.data",
+      "chars": 524288,
+      "sha256": "7e21b0fd9ac9a463b701a90f9d036d220c1b700b8fd7227da6dca6c1f814dac0"
+    },
+    {
+      "name": "chunk-008.data",
+      "chars": 524288,
+      "sha256": "792780c2afb726e1011eb5bf04d5bf7eac9622ac63c2cdb3736ba21ab68fe88c"
+    },
+    {
+      "name": "chunk-009.data",
+      "chars": 524288,
+      "sha256": "b33ac6f6957f2570c3475d9cb320e08bb9d9932dde2fb1b0d334cc26cb287030"
+    },
+    {
+      "name": "chunk-010.data",
+      "chars": 524288,
+      "sha256": "c6bab4742cbdfc1be1f24a24255dd3aa69f2e9b341b619ec982d0c52b71cda07"
+    },
+    {
+      "name": "chunk-011.data",
+      "chars": 524288,
+      "sha256": "456bc329a072e1283829faa7bb728477c00a556cd9a462472a5524b0a92a3f0b"
+    },
+    {
+      "name": "chunk-012.data",
+      "chars": 524288,
+      "sha256": "83de45955119a1e037446d67a53d7dece12b775104979d8d22971dfdea6eeb30"
+    },
+    {
+      "name": "chunk-013.data",
+      "chars": 158320,
+      "sha256": "a8a7e729c947699d5940c60e1e7b201e71946837c667f9c8e81dd07d8b7418e6"
+    }
+  ]
+}
