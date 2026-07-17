@@ -16,6 +16,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Record current run
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '{"runId":%s,"artifact":"tfjs-e-gmd-float32","status":"running"}\n' \
+            "$GITHUB_RUN_ID" > .github/e-gmd-latest-run.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/e-gmd-latest-run.json
+          git commit -m "ci: record active E-GMD conversion run"
+          git push
+
       - uses: actions/setup-python@v6
         with:
           python-version: "3.10"
@@ -52,8 +64,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          printf '{"runId":%s,"artifact":"tfjs-e-gmd-float32"}\n' "$GITHUB_RUN_ID" \
-            > .github/e-gmd-latest-run.json
+          git pull --rebase
+          printf '{"runId":%s,"artifact":"tfjs-e-gmd-float32","status":"complete"}\n' \
+            "$GITHUB_RUN_ID" > .github/e-gmd-latest-run.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/e-gmd-latest-run.json
