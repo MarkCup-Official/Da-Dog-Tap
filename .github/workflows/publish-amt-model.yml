@@ -34,9 +34,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
               --title "DA DOG TAP AMT models v1" \
               --notes "Pinned browser model asset for DA DOG TAP. SHA-256: $MODEL_SHA256"
           fi
-          gh release upload "$RELEASE_TAG" "$MODEL_FILE" --clobber
+          gh release upload "$RELEASE_TAG" "$MODEL_FILE" \
+            --repo "$GITHUB_REPOSITORY" --clobber
