@@ -46,7 +46,12 @@ jobs:
           set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install "tensorflowjs==4.22.0"
-          tensorflowjs_converter \
+          mkdir -p converter-stubs
+          printf '%s\n' \
+            'import sys, types' \
+            'sys.modules["tensorflow_decision_forests"] = types.ModuleType("tensorflow_decision_forests")' \
+            > converter-stubs/sitecustomize.py
+          PYTHONPATH="$PWD/converter-stubs" tensorflowjs_converter \
             --input_format=tf_frozen_model \
             --output_node_names=onset_probs,velocity_values \
             frozen/frozen_e_gmd.pb tfjs-e-gmd
