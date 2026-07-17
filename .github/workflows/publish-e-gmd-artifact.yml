@@ -45,7 +45,7 @@ jobs:
           output = Path("connector-release")
           output.mkdir()
           chunks = []
-          chunk_chars = 1024 * 1024
+          # Keep each text file below the GitHub connector's 1 MiB response\n          # boundary so the local packaging task can retrieve it losslessly.\n          chunk_chars = 512 * 1024
           for index, offset in enumerate(range(0, len(encoded), chunk_chars)):
               contents = encoded[offset:offset + chunk_chars]
               name = "chunk-{:03d}.data".format(index)
