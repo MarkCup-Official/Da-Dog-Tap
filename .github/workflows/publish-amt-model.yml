@@ -42,3 +42,22 @@ jobs:
           fi
           gh release upload "$RELEASE_TAG" "$MODEL_FILE" \
             --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Publish CORS-readable pinned raw asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir raw-model
+          cp "$MODEL_FILE" raw-model/
+          cd raw-model
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan amt-models
+          git add "$MODEL_FILE"
+          git commit -m "model: publish pinned HTDemucs amt-v1"
+          git tag --force htdemucs-amt-v1
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          gh auth setup-git
+          git push --force origin HEAD:refs/heads/amt-models
+          git push --force origin refs/tags/htdemucs-amt-v1
